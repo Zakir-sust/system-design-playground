@@ -1,0 +1,63 @@
+# ============================================================
+#  Secrets / environment  —  NEVER commit real credentials
+# ============================================================
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+appsettings.Local.json
+**/secrets.json
+# Local compose overrides often hold dev secrets:
+docker-compose.override.yml
+
+# ============================================================
+#  .NET  (build output, caches, test results)
+# ============================================================
+bin/
+obj/
+out/
+artifacts/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.userosscache
+*.suo
+*.dll.config
+.vs/
+project.lock.json
+# Test + coverage output
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# NOTE: EF Core Migrations/ ARE source — they are committed, not ignored.
+
+# ============================================================
+#  Angular / Node  (capstone front-ends)
+# ============================================================
+node_modules/
+dist/
+.angular/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ============================================================
+#  IDEs / editors
+# ============================================================
+.idea/
+.vscode/
+*.swp
+*~
+
+# ============================================================
+#  OS cruft
+# ============================================================
+.DS_Store
+.AppleDouble
+Thumbs.db
+ehthumbs.db
