@@ -25,7 +25,7 @@ app.MapGet("/notes", (AppDbContext db) =>
     Console.WriteLine($"notes count: {db.Notes.Count()}");
     return db.Notes.ToList();
 });
-app.MapPost("/notes", (AppDbContext db, string note) =>
+app.MapPost("/notes", async (AppDbContext db, string note) =>
 {
     Console.WriteLine($"New note: {note}");
     var noteModel = new Note
@@ -34,6 +34,7 @@ app.MapPost("/notes", (AppDbContext db, string note) =>
         Content = note,
     };
     db.Notes.Add(noteModel);
+    await db.SaveChangesAsync();
 });
 
 
