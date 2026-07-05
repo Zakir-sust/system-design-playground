@@ -11,7 +11,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Host.UseSerilog((context, config) => config.WriteTo.Console());
+builder.Host.UseSerilog((context, config) => config
+    .WriteTo.Console()
+    .WriteTo.Seq(context.Configuration["Seq:ServerUrl"]!)
+);
 
 var app = builder.Build();
 
@@ -25,7 +28,7 @@ var app = builder.Build();
 app.MapGet("/", () => "Hello World!");
 app.MapGet("/notes", (AppDbContext db) =>
 {
-    Console.WriteLine($"notes count: {db.Notes.Count()}");
+    Log.Error($"notes count: {db.Notes.Count()}");
     return db.Notes.ToList();
 });
 app.MapPost("/notes", async (AppDbContext db, string note) =>
@@ -47,7 +50,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     if (db.Database.CanConnect())
     {
-        Log.Information("Connected to Database");
+        Log.Warning("Connected to Database");
         db.Database.Migrate();
     }
     else
