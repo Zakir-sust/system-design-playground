@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SimpleNote;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Host.UseSerilog((context, config) => config.WriteTo.Console());
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -27,7 +30,8 @@ app.MapGet("/notes", (AppDbContext db) =>
 });
 app.MapPost("/notes", async (AppDbContext db, string note) =>
 {
-    Console.WriteLine($"New note: {note}");
+    
+    Log.Information($"New note: {note}");
     var noteModel = new Note
     {
         Id = Guid.NewGuid(),
@@ -43,11 +47,12 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     if (db.Database.CanConnect())
     {
-        Console.WriteLine("Connected to Database");
+        Log.Information("Connected to Database");
+        db.Database.Migrate();
     }
     else
     {
-        Console.WriteLine("Could not connect to Database");
+       Log.Information("Could not connect to Database");
     }
 }
 app.Run();
