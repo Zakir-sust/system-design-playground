@@ -11,6 +11,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>();
+
+
 builder.Host.UseSerilog((context, config) => config
     .WriteTo.Console()
     .WriteTo.Seq(context.Configuration["Seq:ServerUrl"]!)
@@ -28,13 +32,14 @@ var app = builder.Build();
 app.MapGet("/", () => "Hello World!");
 app.MapGet("/notes", (AppDbContext db) =>
 {
-    Log.Error($"notes count: {db.Notes.Count()}");
+    Log.Information("Notes count: {Count}", db.Notes.Count());
     return db.Notes.ToList();
 });
+
 app.MapPost("/notes", async (AppDbContext db, string note) =>
 {
     
-    Log.Information($"New note: {note}");
+    Log.Information("New note: {Note}", note);
     var noteModel = new Note
     {
         Id = Guid.NewGuid(),
@@ -44,6 +49,7 @@ app.MapPost("/notes", async (AppDbContext db, string note) =>
     await db.SaveChangesAsync();
 });
 
+app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {
