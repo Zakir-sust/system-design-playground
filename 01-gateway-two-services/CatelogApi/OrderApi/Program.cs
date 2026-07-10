@@ -13,9 +13,9 @@ var app = builder.Build();
 //     app.UseSwagger();
 //     app.UseSwaggerUI();
 // }
+//
+// app.UseHttpsRedirection();
 
-app.UseHttpsRedirection();
-
-app.MapGet("/ping", () => "Order API");
+app.MapGet("/orders/ping", () => "Order API");
 
 app.Run();

@@ -14,8 +14,8 @@ var app = builder.Build();
 //     app.UseSwaggerUI();
 // }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
-app.MapGet("/ping", () => "Catelog API");
+app.MapGet("/catelog/ping", () => "Catelog API");
 
 app.Run();
