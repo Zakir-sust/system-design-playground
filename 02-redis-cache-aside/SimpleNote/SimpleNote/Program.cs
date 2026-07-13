@@ -28,10 +28,18 @@ var app = builder.Build();
 // }
 
 app.MapGet("/", () => "Hello World!");
+
 app.MapGet("/notes", (AppDbContext db) =>
 {
     Log.Information("Notes count: {Count}", db.Notes.Count());
     return db.Notes.ToList();
+});
+
+app.MapGet("/notes/{id}", async (string id, AppDbContext db) =>
+{
+    Log.Information("Get note #{id}");
+    var note = await db.Notes.FirstOrDefaultAsync(x => x.Id.ToString() == id);
+    return note;
 });
 
 app.MapPost("/notes", async (AppDbContext db, string note) =>
