@@ -43,9 +43,12 @@ services:
       - "8080:8080"
     environment:
       ConnectionStrings__DefaultConnection: "${POSTGRES_CONNECTION:-Server=mydb;Database=firstdb;User Id=postgres;Password=postgres;Port=5432}"
+      ConnectionStrings__Redis: "${REDIS_CONNECTION:-redis:6379}"
       Seq__ServerUrl: "${SEQ_SERVER_URL:-http://seq:80}"
     depends_on:
       mydb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   pgadmin:
