@@ -54,10 +54,10 @@ docker compose -f SimpleNote/docker-compose.yml exec redis redis-cli KEYS 'note:
 |---|---|---|---|
 | `GET` | `/notes` | — | `200` all notes (**not cached**) |
 | `GET` | `/notes/{id:guid}` | — | `200` note, `404` if missing — **cache-aside** |
-| `POST` | `/notes` | `{"content": "..."}` | `201` + created note |
-| `PUT` | `/notes/{id:guid}` | `{"content": "..."}` | `204`, `404` if missing — **invalidates** |
+| `POST` | `/notes` | `{"content": "..."}` | `201` + created note, `400` if content is empty |
+| `PUT` | `/notes/{id:guid}` | `{"content": "..."}` | `204`, `404` if missing, `400` if content is empty — **invalidates** |
 | `DELETE` | `/notes/{id:guid}` | — | `204`, `404` if missing — **invalidates** |
-| `GET` | `/health` | — | Postgres check only |
+| `GET` | `/health` | — | Postgres **and** Redis |
 
 Cache key is `note:{id}`; TTL comes from `Cache:TtlSeconds` (default 60s).
 
@@ -86,6 +86,15 @@ it to remember.
 It's also what makes the unit test possible: `CachedNoteRepository` depends on two interfaces and nothing
 else, so a fake cache plus a call-counting fake repository are enough to assert *"on a cache hit, the
 database was never touched."*
+
+### Degrading when Redis is down
+A cache should never make a read *less* available than it was without one. Two things make that true here:
+`AbortOnConnectFail` is off, so the app still starts and serves when Redis is unreachable; and every
+`_cache` call in `CachedNoteRepository` is wrapped so a cache failure falls through to Postgres. `/health`
+reports Redis as unhealthy meanwhile, so degraded is visible rather than silent.
+
+The one exception is invalidation: if the eviction fails after a write commits, the request still succeeds
+and the stale entry survives until the TTL expires. That's logged at Error.
 
 ### Two things it deliberately does not do
 - **`GET /notes` (the list) is not cached.** Caching a collection means every insert and delete has to

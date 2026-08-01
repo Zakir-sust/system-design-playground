@@ -24,14 +24,19 @@ public static class NoteEndpoints
 
         notes.MapPost("/", async (CreateNoteRequest request, INoteRepository repo) =>
         {
+            if (MissingContent(request.Content) is { } problem) return problem;
             var note = await repo.AddAsync(request.Content);
             return Results.Created($"/notes/{note.Id}", note);
         });
 
         notes.MapPut("/{id:guid}", async (Guid id, UpdateNoteRequest request, INoteRepository repo) =>
-            await repo.UpdateAsync(id, request.Content)
+        {
+            if (MissingContent(request.Content) is { } problem) return problem;
+
+            return await repo.UpdateAsync(id, request.Content)
                 ? Results.NoContent()
-                : Results.NotFound());
+                : Results.NotFound();
+        });
 
         notes.MapDelete("/{id:guid}", async (Guid id, INoteRepository repo) =>
             await repo.DeleteAsync(id)
@@ -40,4 +45,15 @@ public static class NoteEndpoints
 
         return app;
     }
+
+    // Content is non-nullable in C#, but nothing enforces that on the wire: {"content": null} binds
+    // happily and only fails at the NOT NULL constraint, which surfaces as a 500. Reject it here so
+    // a bad request looks like a bad request.
+    private static IResult? MissingContent(string? content) =>
+        string.IsNullOrWhiteSpace(content)
+            ? Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["content"] = ["Content is required and cannot be empty."]
+            })
+            : null;
 }
