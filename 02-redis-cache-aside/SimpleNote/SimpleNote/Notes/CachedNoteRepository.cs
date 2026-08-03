@@ -14,6 +14,7 @@ public sealed class CachedNoteRepository : INoteRepository
     private readonly ICache _cache;
     private readonly ILogger<CachedNoteRepository> _logger;
     private readonly TimeSpan _ttl;
+    private readonly string _keyPrefix;
 
     public CachedNoteRepository(
         INoteRepository inner,
@@ -25,10 +26,11 @@ public sealed class CachedNoteRepository : INoteRepository
         _cache = cache;
         _logger = logger;
         _ttl = TimeSpan.FromSeconds(settings.Value.TtlSeconds);
+        _keyPrefix = settings.Value.keyPrefix;
     }
 
     // The single definition of the key. Read and invalidation cannot drift apart.
-    private static string CacheKey(Guid id) => $"note:{id}";
+    private string CacheKey(Guid id) => $"{_keyPrefix}:{id}";
 
     public async Task<Note?> GetByIdAsync(Guid id)
     {
@@ -45,9 +47,6 @@ public sealed class CachedNoteRepository : INoteRepository
         }
         catch (Exception ex)
         {
-            // A cache failure is not a miss. A miss means "Redis answered, and it does not have this";
-            // this means "Redis did not answer at all". Logging it as a miss would quietly corrupt the
-            // hit-ratio metric that PLAN.md asks you to add later. Either way, read through to Postgres.
             _logger.LogError(ex, "Cache unavailable reading note {Id}; falling back to the database", id);
         }
 
@@ -73,9 +72,7 @@ public sealed class CachedNoteRepository : INoteRepository
         var updated = await _inner.UpdateAsync(id, content);
         if (!updated) return false;
 
-        // Invalidate *after* the write commits. Evicting first would let a concurrent
-        // reader re-populate the cache with the pre-update row before the new one lands,
-        // leaving a stale entry with a fresh TTL.
+
         await InvalidateAsync(id, "updated");
         return true;
     }
@@ -98,10 +95,6 @@ public sealed class CachedNoteRepository : INoteRepository
         }
         catch (Exception ex)
         {
-            // Deliberately swallowed: the database write has already committed, so failing the request
-            // now would tell the caller their change did not happen when it did. The cost is a stale
-            // entry until the TTL expires — which is precisely what the TTL is there for. This is the
-            // one log line in the app that genuinely means "someone is being served wrong data".
             _logger.LogError(ex,
                 "Note {Id} {Operation} but cache eviction FAILED; entry is stale until TTL expires",
                 id, operation);

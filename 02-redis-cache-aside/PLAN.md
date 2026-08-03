@@ -15,7 +15,7 @@ Add Redis to the project-00 API and serve a read endpoint via cache-aside, then 
 
 - [ ] **M2 — Cache-aside on `GET /notes/{id}`.**
   Read key `note:{id}` from Redis → **hit**: deserialize & return → **miss**: read Postgres, serialize to
-  Redis with a TTL (e.g. 60s),  return. Log HIT/MISS so you can *see* it working.
+  Redis with a TTL (e.g. 60s),  return. Log HIT/MISS so you can *see* it.
 
 - [ ] **M3 — Invalidate on write.**
   On `PUT`/`DELETE /notes/{id}`, delete `note:{id}` from Redis. Observe the next GET re-populates it.
