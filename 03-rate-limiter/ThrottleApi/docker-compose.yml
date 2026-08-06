@@ -1,0 +1,58 @@
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  seq:
+    image: datalust/seq:latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
+    ports:
+      - "5341:80"
+    volumes:
+      - seqdata:/data
+
+  # Two replicas of the same image, spelled out as separate services rather than `deploy.replicas`
+  # so each gets a stable DNS name the gateway can target and its own published port — you want to
+  # be able to hit one replica directly to prove the in-memory counter is per-process.
+  api1:
+    build: ./ThrottleApi
+    ports:
+      - "8081:8080"
+    environment:
+      INSTANCE_ID: api1
+      ConnectionStrings__Redis: "${REDIS_CONNECTION:-redis:6379}"
+      Seq__ServerUrl: "${SEQ_SERVER_URL:-http://seq:80}"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  api2:
+    build: ./ThrottleApi
+    ports:
+      - "8082:8080"
+    environment:
+      INSTANCE_ID: api2
+      ConnectionStrings__Redis: "${REDIS_CONNECTION:-redis:6379}"
+      Seq__ServerUrl: "${SEQ_SERVER_URL:-http://seq:80}"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  gateway:
+    build: ./Gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api1
+      - api2
+
+volumes:
+  seqdata:

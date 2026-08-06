@@ -1,0 +1,15 @@
+# Build output (rebuilt inside the image — never copy host artifacts)
+bin/
+obj/
+
+# Secrets / local config
+.env
+
+# IDE / editor cruft
+.vs/
+.idea/
+*.user
+
+# Docker files themselves
+Dockerfile
+.dockerignore
